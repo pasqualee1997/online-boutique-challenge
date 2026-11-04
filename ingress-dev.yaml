@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1  # API Kubernetes per Ingress.
+kind: Ingress                     # Creiamo una risorsa Ingress.
+metadata:                         # Informazioni identificative.
+  name: frontend-ingress          # Nome dell'Ingress.
+  namespace: dev                  # Ambiente DEV.
+spec:                             # Regole di instradamento.
+  rules:
+    - http:                       # Gestiamo richieste HTTP.
+        paths:
+          - path: /               # Percorso principale del sito.
+            pathType: Prefix      # Include anche i percorsi sotto /.
+            backend:             # Destinazione del traffico.
+              service:
+                name: frontend    # Service del nostro negozio.
+                port:
+                  number: 80      # Porta del Service.

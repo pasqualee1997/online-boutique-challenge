@@ -1,0 +1,35 @@
+apiVersion: v1                  # Versione API Kubernetes.
+kind: ServiceAccount            # Crea un'identità Kubernetes.
+metadata:                       # Dati identificativi.
+  name: lettore-pod              # Nome dell'identità.
+  namespace: dev                 # Ambiente DEV.
+
+---
+# PARTE 2 - ROLE
+
+apiVersion: rbac.authorization.k8s.io/v1  # API per i permessi RBAC.
+kind: Role                      # Definisce un ruolo.
+metadata:                       # Dati identificativi.
+  name: lettura-pod              # Nome del ruolo.
+  namespace: dev                 # Il ruolo vale in DEV.
+rules:                          # Regole dei permessi.
+  - apiGroups: [""]              # Gruppo API principale.
+    resources: ["pods"]          # Risorsa interessata: Pod.
+    verbs: ["get", "list"]        # Leggere un Pod o elencare i Pod.
+
+---
+# PARTE 3 - ROLEBINDING
+
+apiVersion: rbac.authorization.k8s.io/v1  # API per i permessi RBAC.
+kind: RoleBinding               # Assegna un ruolo a un'identità.
+metadata:                       # Dati identificativi.
+  name: assegna-lettura-pod      # Nome del collegamento.
+  namespace: dev                 # Il collegamento vale in DEV.
+subjects:                       # Chi riceve i permessi.
+  - kind: ServiceAccount        # Il destinatario è un ServiceAccount.
+    name: lettore-pod            # Identità creata nella prima parte.
+    namespace: dev               # Identità presente in DEV.
+roleRef:                        # Ruolo da assegnare.
+  kind: Role                     # Tipo di ruolo.
+  name: lettura-pod              # Ruolo creato nella seconda parte.
+  apiGroup: rbac.authorization.k8s.io  # Gruppo API RBAC.

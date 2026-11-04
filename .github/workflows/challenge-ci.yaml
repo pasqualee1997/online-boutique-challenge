@@ -1,0 +1,39 @@
+name: Challenge CI
+
+on: #Quando parte le pipeline
+   push: #Parte quando vengono pubblicate modifiche su GitHub tramite git push
+
+ #«La mia pipeline si chiama Challenge CI e deve avviarsi quando pubblico modifiche sul repository
+
+jobs: #indica le attività che la pipeline deve svolgere
+ build: #è il nome che diamo alla nostra attività.
+  runs-on: ubuntu-latest #chiediamo a GitHub di mettere a disposizione un computer virtuale con Linux Ubuntu per eseguire l'attività.
+
+  #configurato un job chiamato build, eseguito su una macchina virtuale Ubuntu fornita da GitHub Actions.»
+  #ATTENZIONE: non abbiamo ancora indicato i comandi da eseguire. Quelli arriveranno con la sezione steps.
+
+###################################################STEPS##########################################################
+
+  steps: #passaggi cone le pipeline deve eseguire
+      - name: Scarica il codice #nome del primo passaggio
+        uses: actions/checkout@v4 #azione già pronta di GitHub per scaricare il codice del nostro repository sul computer virtuale Ubuntu.
+
+      - name: Prepara Go #Prepara la versione di Go sul pc
+        uses: actions/setup-go@v5 #er eseguire questa operazione, utilizza lo strumento già pronto chiamato setup-go, versione 5
+        with:
+          go-version-file: src/frontend/go.mod #indica dove leggere la versione di Go richiesta dal frontend.
+      
+      ##################################TEST PIPELINE#########################################################################
+
+      - name: Test frontend #nome del terzo passaggio
+        run: go test ./... #esegui test codice GO
+        working-directory: src/frontend #esegue il comando nella cartella del frontend
+
+        #################################################COSTRUZIONE DOCKER#########################################################
+
+      - name: Build Docker frontend #nome del quarto passaggio
+        # Costruisce l'immagine Docker del frontend
+        # -t assegna nome e tag all'immagine
+        # -f indica il Dockerfile da utilizzare
+        # src/frontend è la cartella da cui Docker prende i file
+        run: docker build -t frontend-challenge:latest -f src/frontend/Dockerfile src/frontend
