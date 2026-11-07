@@ -581,3 +581,348 @@ Il frontend è stato invece verificato tramite `kubectl port-forward`, con navig
 ### Separazione degli ambienti
 
 Le risorse RBAC e Ingress sono state configurate esclusivamente nel namespace `dev`. Il namespace `prod` non è stato modificato durante queste attività.
+
+## 4.4 — CI/CD con GitHub Actions e deployment DEV
+
+### Obiettivo
+
+L'obiettivo di questa fase è automatizzare i controlli sul codice del frontend di Online Boutique e predisporre una procedura ripetibile per distribuire l'applicazione nell'ambiente DEV.
+
+Sono stati utilizzati Git, GitHub, GitHub Actions, Docker, Kind e Kubernetes.
+
+### 1. Versionamento del progetto con Git
+
+È stato inizializzato un repository Git locale per tenere traccia delle modifiche al progetto.
+
+**Comandi utilizzati:**
+
+```cmd
+git init
+git status
+git add .github/workflows/challenge-ci.yaml
+git add src/frontend
+git commit -m "Aggiunta configurazioni e pipeline CI"
+git commit -m "Aggiunto codice frontend"
+git branch -M main
+```
+
+**Spiegazione:**
+
+- `git init`: inizializza il repository Git locale.
+- `git status`: visualizza lo stato dei file.
+- `git add`: prepara i file per il commit.
+- `git commit -m`: registra le modifiche nella cronologia Git con un messaggio descrittivo.
+- `git branch -M main`: rinomina il ramo principale in `main`.
+
+Sono stati creati commit per registrare le configurazioni Kubernetes, la pipeline CI e il codice sorgente del frontend.
+
+### 2. Collegamento del progetto a GitHub
+
+È stato creato un repository GitHub privato denominato `online-boutique-challenge`.
+
+**Comandi utilizzati:**
+
+```cmd
+git remote -v
+git remote add origin https://github.com/pasqualee1997/online-boutique-challenge.git
+git push -u origin main
+```
+
+**Spiegazione:**
+
+- `git remote -v`: verifica i repository remoti configurati.
+- `git remote add origin`: collega il repository locale a GitHub.
+- `git push -u origin main`: pubblica i commit sul ramo `main` e configura il collegamento con il ramo remoto.
+
+**Risultato:** codice e configurazioni pubblicati correttamente nel repository GitHub privato.
+
+### 3. Configurazione della pipeline CI
+
+È stato creato il file:
+
+`.github/workflows/challenge-ci.yaml`
+
+La pipeline viene avviata automaticamente a ogni `push` su GitHub.
+
+**Operazioni eseguite dalla pipeline:**
+
+1. Recupero del codice tramite `actions/checkout@v4`.
+2. Configurazione dell'ambiente Go tramite `actions/setup-go@v5`.
+3. Esecuzione dei test del frontend con `go test ./...`.
+4. Costruzione dell'immagine Docker del frontend.
+
+**Comando di build utilizzato:**
+
+```cmd
+docker build -t frontend-challenge:latest -f src/frontend/Dockerfile src/frontend
+```
+
+La pipeline viene eseguita su un runner GitHub con sistema operativo Ubuntu.
+
+**Risultato:** la pipeline `Challenge CI` è stata eseguita con successo, completando i test Go e la build Docker.
+
+### 4. Preparazione del deployment in DEV
+
+È stato creato lo script Windows:
+
+`deploy-dev.bat`
+
+Lo script permette di eseguire manualmente una procedura di deployment del frontend nel cluster Kind locale.
+
+**Operazioni previste dallo script:**
+
+1. Verifica del contesto Kubernetes `kind-prova`.
+2. Verifica dell'esistenza del namespace `dev`.
+3. Costruzione dell'immagine Docker del frontend.
+4. Caricamento dell'immagine nel cluster Kind.
+5. Aggiornamento dell'immagine del Deployment `frontend` nel namespace DEV.
+6. Riavvio controllato del Deployment.
+7. Verifica del completamento del rollout.
+
+**Comandi principali utilizzati:**
+
+```cmd
+kubectl config current-context
+kubectl get namespace dev
+
+docker build -t frontend-challenge:latest -f src/frontend/Dockerfile src/frontend
+
+kind load docker-image frontend-challenge:latest --name prova
+
+kubectl set image deployment/frontend server=frontend-challenge:latest -n dev
+
+kubectl rollout restart deployment/frontend -n dev
+
+kubectl rollout status deployment/frontend -n dev --timeout=180s
+
+kubectl get deployment frontend -n dev
+```
+
+Lo script contiene controlli per interrompere la procedura in caso di errore e limita il deployment al namespace `dev`.
+
+**Risultato:** dopo la correzione del controllo sul contesto Kubernetes, lo script è stato eseguito con successo.
+
+### 5. Pubblicazione dello script di deployment
+
+Dopo aver verificato il funzionamento dello script, è stato registrato e pubblicato su GitHub.
+
+**Comandi utilizzati:**
+
+```cmd
+git add deploy-dev.bat
+git commit -m "Aggiunto deployment DEV funzionante"
+git push
+```
+
+Il nuovo `push` ha avviato nuovamente la pipeline GitHub Actions.
+
+**Risultato:** l'ultima esecuzione di `Challenge CI` è terminata con stato `Success`.
+
+### 6. Differenza tra CI e CD nella soluzione realizzata
+
+**Continuous Integration (CI):** automatizzata tramite GitHub Actions. A ogni push vengono eseguiti i test del frontend e la build Docker.
+
+**Continuous Delivery (CD):** è stata predisposta una procedura manuale e ripetibile tramite lo script `deploy-dev.bat`, eseguito sul computer locale.
+
+La pipeline GitHub Actions non distribuisce automaticamente l'applicazione nel cluster Kind e non pubblica l'immagine Docker in un registry remoto.
+
+Lo script di deployment costruisce localmente l'immagine e la carica nel cluster Kind.
+
+### 7. Sicurezza degli ambienti
+
+Le operazioni di deployment sono state limitate al namespace `dev`.
+
+Non sono state eseguite operazioni di aggiornamento sull'ambiente PROD durante questa fase.
+
+### 8. Risultato finale
+
+La fase ha permesso di ottenere:
+
+- Repository GitHub privato con codice e configurazioni versionati.
+- Pipeline CI automatica con GitHub Actions.
+- Test automatici del frontend Go.
+- Build automatica dell'immagine Docker.
+- Script locale per il deployment ripetibile in DEV.
+- Verifica positiva dell'ultima esecuzione della pipeline.
+
+**Conclusione:** è stata realizzata una soluzione CI automatizzata, accompagnata da una procedura di deployment manuale per l'ambiente DEV.
+
+## 4.7 — Rollback e troubleshooting
+
+Per verificare la capacità di diagnosticare e risolvere problemi su Kubernetes, è stata eseguita una simulazione controllata di aggiornamento fallito del frontend nel namespace `dev`.
+
+### Simulazione del problema
+
+È stata impostata un'immagine Docker inesistente:
+
+```bash
+kubectl set image deploy/frontend server=frontend-challenge:errore -n dev
+```
+
+Il nuovo Pod non è riuscito a scaricare l'immagine ed è entrato nello stato `ImagePullBackOff`, mentre il Pod precedente è rimasto funzionante.
+
+### Diagnosi e continuità del servizio
+
+Lo stato dei Pod è stato verificato con:
+
+```bash
+kubectl get pods -n dev
+```
+
+Per controllare la disponibilità dell'applicazione durante l'aggiornamento fallito è stato utilizzato:
+
+```bash
+kubectl port-forward svc/frontend 8083:80 -n dev
+```
+
+Il frontend è risultato raggiungibile all'indirizzo `http://localhost:8083`. È stato inoltre completato un ordine fino alla schermata **Order Complete**.
+
+Questo test ha dimostrato che la strategia `RollingUpdate` ha mantenuto disponibile il Pod precedente e che il Service ha continuato a indirizzare il traffico verso il Pod pronto.
+
+### Rollback e verifica
+
+Per annullare l'aggiornamento errato è stato eseguito:
+
+```bash
+kubectl rollout undo deploy/frontend -n dev
+```
+
+Il rollback è stato confermato dal messaggio `deployment.apps/frontend rolled back`.
+
+Successivamente sono stati verificati lo stato dei Pod e il completamento del rollout:
+
+```bash
+kubectl get pods -n dev
+kubectl rollout status deploy/frontend -n dev
+```
+
+**Risultato:** tutti i Pod erano `1/1 Running` e Kubernetes ha confermato `deployment "frontend" successfully rolled out`.
+
+### Documentazione
+
+La procedura completa di diagnosi, verifica della continuità del servizio e ripristino è disponibile nel file [runbook.md](runbook.md).
+
+Tutte le operazioni sono state eseguite esclusivamente nel namespace `dev`, senza modificare `prod`.
+
+## 4.3 – Packaging Kubernetes con Helm
+
+Per il packaging Kubernetes è stato utilizzato l'Helm Chart già presente nel progetto Online Boutique, nella directory `helm-chart/`.
+
+Il Chart contiene:
+- `Chart.yaml`: metadati del Chart.
+- `values.yaml`: parametri di configurazione.
+- `templates/`: template Kubernetes dei microservizi.
+- `README.md`: documentazione del Chart.
+
+### Validazione del Chart
+
+È stata verificata la correttezza del Chart mediante:
+
+```bash
+helm lint ./helm-chart
+```
+
+Risultato: `1 chart(s) linted, 0 chart(s) failed`.
+
+Successivamente sono stati generati i manifest Kubernetes:
+
+```bash
+helm template boutique ./helm-chart --namespace dev > helm-rendered.yaml
+```
+
+Infine è stata eseguita una simulazione dell'applicazione dei manifest:
+
+```bash
+kubectl apply --dry-run=client --validate=false -f helm-rendered.yaml -n dev
+```
+
+Il comando è terminato senza errori.
+
+### Risultato
+
+Il Chart Helm è stato validato e i manifest sono stati generati correttamente. La verifica tramite `dry-run` non ha modificato le risorse Kubernetes esistenti.
+
+Non è stata effettuata una nuova installazione del Chart tramite Helm durante questa verifica.
+
+## 4.4 – Valutazione tecnica di Krateo
+
+### Obiettivo
+
+Krateo è una piattaforma open source orientata al Platform Engineering, che permette di proporre servizi e risorse infrastrutturali attraverso un modello self-service e dichiarativo.
+
+L'obiettivo della valutazione è comprendere come Krateo potrebbe migliorare la gestione dell'applicazione Online Boutique distribuita su Kubernetes.
+
+### Possibile integrazione con Online Boutique
+
+Attualmente l'applicazione viene gestita tramite manifest Kubernetes, Helm e script di deployment.
+
+Una possibile evoluzione prevede l'utilizzo di Krateo come livello di Platform Engineering per:
+
+- Esporre Online Boutique attraverso un catalogo self-service.
+- Standardizzare la creazione degli ambienti DEV e PROD.
+- Consentire ai team di richiedere un'istanza applicativa tramite parametri predefiniti.
+- Integrare procedure di deployment e governance.
+- Definire un percorso standardizzato, o *golden path*, per il rilascio dell'applicazione.
+
+### Disegno logico dell'integrazione proposta
+
+```text
+Team di sviluppo
+       |
+       v
+Catalogo self-service Krateo
+       |
+       v
+Richiesta applicativa
+(ambiente, versione, configurazione)
+       |
+       v
+Automazione e governance
+       |
+       v
+Helm Chart / Manifest Kubernetes
+       |
+       v
+Cluster Kubernetes
+       |
+       +---- Namespace DEV
+       |
+       +---- Namespace PROD
+       |
+       v
+Online Boutique
+```
+
+Questo schema rappresenta un'architettura proposta, non un'integrazione già implementata.
+
+### Vantaggi
+
+- Maggiore standardizzazione dei deployment.
+- Riduzione delle operazioni manuali ripetitive.
+- Possibilità di offrire funzionalità self-service ai team.
+- Gestione più uniforme degli ambienti.
+- Migliore governance in scenari con numerosi team e applicazioni.
+
+### Svantaggi e complessità
+
+- Introduzione di ulteriori componenti infrastrutturali.
+- Maggiore complessità operativa e di manutenzione.
+- Necessità di configurare e testare le integrazioni.
+- Costi di apprendimento e gestione.
+- Benefici limitati in un ambiente dimostrativo con una sola applicazione.
+
+### Decisione architetturale
+
+Per questa Challenge si è deciso di non installare Krateo nel cluster Kubernetes locale.
+
+La scelta è motivata dalla dimensione dell'ambiente, composto da un'applicazione dimostrativa e due namespace logici, DEV e PROD.
+
+L'utilizzo diretto di Kubernetes, Helm e degli script di deployment è sufficiente per gli obiettivi attuali.
+
+Krateo viene quindi proposto come possibile evoluzione futura, soprattutto in presenza di più applicazioni, più team e necessità di standardizzare il provisioning self-service.
+
+### Conclusione
+
+La valutazione individua Krateo come possibile livello di Platform Engineering da introdurre in una fase successiva.
+
+Non è stata realizzata un'integrazione operativa o una PoC Krateo. È stato invece definito un disegno logico di integrazione e motivata la non adozione immediata.
