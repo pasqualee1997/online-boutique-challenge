@@ -82,7 +82,7 @@ I namespace `dev` e `prod` risultano entrambi `Active`.
 
 Ho installato Online Boutique nel namespace `dev`.
 
-kubectl apply -f kubernetes-manifests.yaml -n dev
+kubectl apply -f release/kubernetes-manifests-dev.yaml -n dev
 kubectl get pods -n dev
 kubectl get svc -n dev
 
@@ -107,7 +107,7 @@ Ho installato Online Boutique anche nel namespace `prod`, utilizzando il file `k
 Comandi utilizzati:
 
 ```bash
-kubectl apply -f kubernetes-manifests.yaml -n prod
+kubectl apply -f release/kubernetes-manifests.yaml -n prod
 kubectl get pods -n prod
 kubectl port-forward svc/frontend 8081:80 -n prod
 ```
@@ -264,7 +264,7 @@ Il Secret contiene:
 Comando utilizzato:
 
 ```bash
-kubectl create secret generic frontend-secret --from-literal=DEMO_PASSWORD=PasswordDemo2026 -n dev
+kubectl create secret generic frontend-secret --from-literal=DEMO_PASSWORD=INSERIRE_PASSWORD_PERSONALE -n dev
 ```
 
 Nel Deployment del frontend abbiamo aggiunto:
@@ -926,3 +926,48 @@ Krateo viene quindi proposto come possibile evoluzione futura, soprattutto in pr
 La valutazione individua Krateo come possibile livello di Platform Engineering da introdurre in una fase successiva.
 
 Non è stata realizzata un'integrazione operativa o una PoC Krateo. È stato invece definito un disegno logico di integrazione e motivata la non adozione immediata.
+
+## 4.8 – Utilizzo dell'intelligenza artificiale nella Challenge
+
+### Strumento utilizzato
+
+Durante lo svolgimento della Challenge ho utilizzato ChatGPT come strumento di supporto per comprendere tecnologie e configurazioni, analizzare errori e preparare la documentazione.
+
+### Ambiti di utilizzo
+
+**Analisi del codice:** ho utilizzato l'AI per comprendere la struttura dei microservizi Online Boutique, i Dockerfile e le dipendenze applicative.
+
+**Kubernetes:** ho richiesto spiegazioni sui Deployment, Service, namespace, ConfigMap, Secret, ServiceAccount e RBAC.
+
+**CI/CD:** ho utilizzato l'AI come supporto per preparare e correggere la pipeline GitHub Actions e lo script di deployment DEV.
+
+**Troubleshooting:** ho condiviso messaggi di errore e risultati dei comandi per individuare problemi di configurazione, immagini Docker, accesso al cluster e aggiornamenti Kubernetes.
+
+**Documentazione:** ho utilizzato l'AI per organizzare le attività svolte e descrivere i risultati delle verifiche.
+
+### Approccio adottato
+
+Le richieste all'AI sono state formulate partendo da problemi concreti, ad esempio:
+
+- Come verificare lo stato dei Pod Kubernetes?
+- Come interpretare un errore ImagePullBackOff?
+- Come configurare una ConfigMap e un Secret?
+- Come verificare una pipeline GitHub Actions?
+- Come effettuare il rollback di un Deployment?
+
+### Verifica degli output
+
+Le indicazioni ricevute non sono state considerate automaticamente corrette.
+
+I comandi e le configurazioni sono stati verificati tramite strumenti come Docker, kubectl, Helm, Git e GitHub Actions.
+
+Sono stati accettati gli output che hanno superato le verifiche; gli errori individuati sono stati corretti e le soluzioni non necessarie sono state scartate.
+
+Un esempio è il problema di connettività tra Windows e il cluster Kind: è stato utilizzato temporaneamente un container ponte per ripristinare l'accesso, senza considerarlo una soluzione architetturale definitiva.
+
+### Limiti
+
+L'AI è stata utilizzata come supporto all'implementazione e al troubleshooting, non come sostituto dei test tecnici.
+
+La responsabilità della verifica delle configurazioni e della valutazione dei risultati rimane del candidato.
+
